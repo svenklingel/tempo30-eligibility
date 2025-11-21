@@ -1,9 +1,9 @@
 
-# Tempo 30 Zones Analysis
+# Tempo 30 zones analysis
 
 A comprehensive project for the automated identification and visualization of Tempo 30 (20 mph / 30 km/h) zones based on OpenStreetMap (OSM) data and PostGIS analysis. A Node.js proxy is included to bypass CORS restrictions between the browser and GeoServer.
 
-## Core Components
+## Core components
 
 This project combines several tools for importing, analyzing, and providing geospatial data:
 
@@ -16,9 +16,11 @@ This project combines several tools for importing, analyzing, and providing geos
 | **Visualization** | **Presentation** | Frontend for displaying the identified zones. | **MapLibre** |
 ---
 
-## Installation and Setup
+## Installation and setup
 
-### 1. Execute Setup
+### 1. Install OSGeoLive as a virtual machine
+
+### 2. Execute setup
 
 Run the setup shell to install all dependencies and populate the PostGIS database with OSM data.
 
@@ -26,8 +28,17 @@ Run the setup shell to install all dependencies and populate the PostGIS databas
 chmod +x setup.sh
 ./setup.sh
 ````
+### 3. Start GeoServer
 
-### 2. Start Proxy
+Start GeoServer inside your OSGeoLive VM. 
+
+```bash
+chmod +x setup.sh
+./setup.sh
+````
+
+
+### 4. Start proxy
 
 Start the Express proxy server, which acts as an intermediary between your browser and GeoServer.
 
@@ -35,7 +46,7 @@ Start the Express proxy server, which acts as an intermediary between your brows
 node proxy.js
 ```
 
-### 3. Open Application
+### 4. Open application
 
 Open the map in your browser to view the analyzed Tempo 30 zones.
 
@@ -47,19 +58,19 @@ open map.html
 
 ---
 
-## Tempo 30 Zones Logic
+## Tempo 30 zones logic
 
 The identification of road segments eligible for Tempo 30 follows a two-stage logic: **Zones** and **Connecting Segments**.
 
-### 1. Primary Zone Identification
+### 1. Primary zone identification
 
 Road segments are assigned Tempo 30 zones if one of the following conditions is met.
 
-#### A. Automatic Assignment
+#### A. Automatic assignment
 
-* **Residential Roads:** All roads tagged with `highway=residential` are automatically classified as Tempo 30.
+* **Residential roads:** All roads tagged with `highway=residential` are automatically classified as Tempo 30.
 
-#### B. Conditional Assignment (at least one condition must be met)
+#### B. Conditional assignment (at least one condition must be met)
 
 Applies to the following major road classes:
 
@@ -72,7 +83,7 @@ Applies to the following major road classes:
 | **Noise Protection**  | Residential buildings located less than 15 meters from the road. | `building=residential`, `building=apartments`, `building=house`, `building=terrace`                    |
 | **Social Facilities** | Sensitive facilities located less than 50 meters from the road.  | `amenity=school`, `amenity=kindergarten`, `amenity=hospital`, `leisure=playground`, `highway=crossing` |
 
-### 2. Zone Extension (Connecting Segments)
+### 2. Zone extension (Connecting segments)
 
 After primary zones are identified, the zones are extended based on the following rules:
 
