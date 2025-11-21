@@ -46,7 +46,7 @@ Start the Express proxy server, which acts as an intermediary between your brows
 node proxy.js
 ```
 
-### 4. Open application
+### 5. Open application
 
 Open the map in your browser to view the analyzed Tempo 30 zones.
 
@@ -83,7 +83,7 @@ Applies to the following major road classes:
 | **Noise Protection**  | Residential buildings located less than 15 meters from the road. | `building=residential`, `building=apartments`, `building=house`, `building=terrace`                    |
 | **Social Facilities** | Sensitive facilities located less than 50 meters from the road.  | `amenity=school`, `amenity=kindergarten`, `amenity=hospital`, `leisure=playground`, `highway=crossing` |
 
-### 2. Zone extension (Connecting segments)
+### 2. Zone extension (connecting segments)
 
 After primary zones are identified, the zones are extended based on the following rules:
 
