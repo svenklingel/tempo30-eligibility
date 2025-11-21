@@ -7,14 +7,13 @@ A comprehensive project for the automated identification and visualization of Te
 
 This project combines several tools for importing, analyzing, and providing geospatial data:
 
-| Component | Layer | Purpose | Technology |
-| :--- | :--- | :--- | :--- |
-| **Import** | **Data (Access)** | Loads OSM data into the database. | `osm2pgsql` |
-| **Storage & Analysis** | **Data (Storage)** | Stores road data and performs spatial analysis. | **PostGIS** |
-| **Provision** | **Application (Service)** | Provides analysis results as a WFS service. | **GeoServer** |
-| **Proxy** | **Service/Middleware** | Bypasses CORS restrictions for WFS queries. | **Express.js** |
-| **Visualization** | **Presentation** | Frontend for displaying the identified zones. | **MapLibre** |
----
+| Component | Layer | Purpose |
+| :--- | :--- | :--- |
+| **osm2pgsql** | **Data** | Loads OSM data into the database. |
+| **PostGIS** | **Data** | Stores road data and performs spatial analysis. |
+| **GeoServer** | **Application** | Provides analysis results as a WFS service. |
+| **Express.js** | **Service/Middleware** | Proxy to bypass CORS restrictions for WFS queries. |
+| **MapLibre** | **Presentation** | Frontend for displaying the identified zones. |
 
 ## Installation and setup
 
@@ -32,12 +31,6 @@ chmod +x setup.sh
 
 Start GeoServer inside your OSGeoLive VM. 
 
-```bash
-chmod +x setup.sh
-./setup.sh
-````
-
-
 ### 4. Start proxy
 
 Start the Express proxy server, which acts as an intermediary between your browser and GeoServer.
@@ -53,8 +46,6 @@ Open the map in your browser to view the analyzed Tempo 30 zones.
 ```bash
 open map.html
 ```
-
-> **Note:** Ensure that your GeoServer instance is running before opening the application.
 
 ---
 
