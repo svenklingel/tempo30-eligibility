@@ -27,17 +27,22 @@ Run the setup shell to install all dependencies and populate the PostGIS databas
 chmod +x setup.sh
 sudo ./setup.sh
 ````
-### 3. Start GeoServer
+### 3. Initialize application
 
-Start GeoServer inside your OSGeoLive VM. 
+Run the setup shell to initialize the application.
+
+```bash
+chmod +x setup.sh
+sudo ./setup.sh
+````
 
 ### 4. Start application
 
 Run the start shell to start the application.
 
 ```bash
-chmod +x setup.sh
-sudo ./setup.sh
+chmod +x start.sh
+./start.sh
 ````
 
 ## Tempo 30 zones logic
