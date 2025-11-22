@@ -2,59 +2,88 @@
 set -e
 
 # ------------------------
-# Konfiguration
+# Configuration
 # ------------------------
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 GEOSERVER_HOME="/usr/local/lib/geoserver-2.22.2"
-GEOSERVER_REST_URL="http://localhost:8082/geoserver/rest/about/status.json"
-HTML_FILE="frontend/map.html"
-PROXY_SCRIPT="proxy.js"
+GEOSERVER_REST_URL="http://localhost:8082/geoserver/rest/about/version.json"
+GEOSERVER_USER="admin"
+GEOSERVER_PASS="geoserver"
+HTML_FILE="$SCRIPT_DIR/frontend/map.html"
+PROXY_SCRIPT="$SCRIPT_DIR/proxy.js"
+
+# -----------------------------------------------
+# Start PostgreSQL 
+# -----------------------------------------------
+if ! systemctl is-active --quiet postgresql; then
+    echo "Starting PostgreSQL..."
+    sudo systemctl start postgresql
+    echo "PostgreSQL started"
+else
+    echo "PostgreSQL is already running."
+fi
 
 # ------------------------
-# 1️⃣ GeoServer starten
+# 1. Start GeoServer
 # ------------------------
-echo "Starte GeoServer..."
-nohup "$GEOSERVER_HOME/bin/start_admin.sh" > geoserver.log 2>&1 &
+if pgrep -f "geoserver" > /dev/null; then
+    echo "GeoServer is already running."
+else
+    echo "Starting GeoServer..."
+    nohup "$GEOSERVER_HOME/bin/startup.sh" > /dev/null 2>&1 &
+fi
 
 # ------------------------
-# 2️⃣ Auf GeoServer warten
+# 2. Wait for GeoServer
 # ------------------------
-echo "Warte auf GeoServer..."
-MAX_RETRIES=30   # maximal 30 Versuche
-SLEEP_SEC=2      # Wartezeit zwischen Versuchen
-
-for ((i=1; i<=MAX_RETRIES; i++)); do
-    STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$GEOSERVER_REST_URL")
-    if [ "$STATUS" -eq 200 ]; then
-        echo "GeoServer ist bereit!"
+echo "Waiting for GeoServer..."
+MAX_WAIT=120
+COUNTER=0
+while [ $COUNTER -lt $MAX_WAIT ]; do
+    if curl -s -u "$GEOSERVER_USER:$GEOSERVER_PASS" "$GEOSERVER_REST_URL" > /dev/null 2>&1; then
+        echo "GeoServer is ready!"
         break
-    else
-        echo "GeoServer nicht bereit (Versuch $i/$MAX_RETRIES), warte $SLEEP_SEC Sekunden..."
-        sleep $SLEEP_SEC
     fi
-
-    if [ "$i" -eq $MAX_RETRIES ]; then
-        echo "GeoServer konnte nicht gestartet werden. Skript wird beendet."
-        exit 1
-    fi
+    echo "Waiting... ($COUNTER seconds)"
+    sleep 5
+    COUNTER=$((COUNTER + 5))
 done
 
-# ------------------------
-# 3️⃣ Proxy starten
-# ------------------------
-echo "Starte GeoServer-Proxy..."
-nohup node "$PROXY_SCRIPT" > proxy.log 2>&1 &
-sleep 2
-echo "GeoServer-Proxy gestartet"
+if [ $COUNTER -ge $MAX_WAIT ]; then
+    echo "GeoServer could not be started."
+    exit 1
+fi
 
 # ------------------------
-# 4️⃣ HTML Map öffnen
+# Start Proxy
 # ------------------------
-echo "Öffne Map..."
+echo "Starting GeoServer Proxy..."
+if pgrep -f "node.*proxy.js" > /dev/null; then
+    echo "Proxy is already running."
+else
+    cd "$SCRIPT_DIR"
+    nohup node "$PROXY_SCRIPT" > /dev/null 2>&1 &
+    sleep 2
+    echo "GeoServer Proxy started"
+fi
+
+# ------------------------
+# Open HTML Map
+# ------------------------
+echo "Opening map in browser..."
 if [ -f "$HTML_FILE" ]; then
-    xdg-open "$HTML_FILE" &
-    echo "Map geöffnet"
+    firefox --new-tab "file://$HTML_FILE" 2>/dev/null &
+    echo "Map opened in Firefox: file://$HTML_FILE"
 else
     echo "HTML file not found: $HTML_FILE"
 fi
 
-echo "✅ Master-Skript abgeschlossen"
+echo ""
+echo "========================================="
+echo "Master script completed successfully"
+echo "========================================="
+echo "GeoServer: http://localhost:8082/geoserver"
+echo "Map: file://$HTML_FILE"
+echo "========================================="
+
+echo "Firefox will open and display the map"

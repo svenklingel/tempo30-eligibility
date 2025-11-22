@@ -25,24 +25,20 @@ Run the setup shell to install all dependencies and populate the PostGIS databas
 
 ```bash
 chmod +x setup.sh
-./setup.sh
+sudo ./setup.sh
 ````
 ### 3. Start GeoServer
 
 Start GeoServer inside your OSGeoLive VM. 
 
-### 4. Start proxy
+### 4. Start application
 
-Start the Express proxy server, which acts as an intermediary between your browser and GeoServer.
+Run the start shell to start the application.
 
 ```bash
-node proxy.js
-```
-
-### 5. Open application
-
-Open the map.html in your browser to view the analyzed Tempo 30 zones.
----
+chmod +x setup.sh
+sudo ./setup.sh
+````
 
 ## Tempo 30 zones logic
 

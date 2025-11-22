@@ -1,17 +1,17 @@
 #!/bin/bash
-set -e  # Skript stoppt bei Fehlern
+set -e  
 
 echo "Setup started."
 
-# Datenbank aufsetzen
+# Initialize database
 ./database/setup.sh
 echo "Database initialized."
 
-# Analyse durchführen 
+# Analyze data 
 ./database/analyze.sh
 echo "Eligible roads identified."
 
-# GeoServer konfigurieren
+# Initialize GeoServer
 ./geoserver/setup.sh
 echo "GeoServer configured."
 
