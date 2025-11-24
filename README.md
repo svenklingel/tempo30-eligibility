@@ -11,7 +11,7 @@ This project combines several tools for importing, analyzing, and providing geos
 | :--- | :--- | :--- |
 | **osm2pgsql** | **Data** | Loads OSM data into the database. |
 | **PostGIS** | **Data** | Stores road data and performs spatial analysis. |
-| **GeoServer** | **Service** | Provides analysis results as a WFS service. |
+| **GeoServer** | **Service** | Provides analysis results as a WFS. |
 | **Express.js** | **Service** | Proxy to bypass CORS restrictions for WFS queries. |
 | **MapLibre** | **Presentation** | Frontend for displaying the identified zones. |
 
@@ -67,15 +67,15 @@ Applies to the following major road classes:
 
 | Condition             | Description                                                      | OSM Tags (Examples)                                                                                    |
 | :-------------------- | :--------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------- |
-| **Noise Protection**  | Residential buildings located less than 15 meters from the road. | `building=residential`, `building=apartments`, `building=house`, `building=terrace`                    |
-| **Social Facilities** | Sensitive facilities located less than 50 meters from the road.  | `amenity=school`, `amenity=kindergarten`, `amenity=hospital`, `leisure=playground`, `highway=crossing` |
+| **Noise protection**  | Residential buildings located less than 15 meters from the road. | `building=residential`, `building=apartments`, `building=house`, `building=terrace`                    |
+| **Social facilities** | Sensitive facilities located less than 50 meters from the road.  | `amenity=school`, `amenity=kindergarten`, `amenity=hospital`, `leisure=playground`, `highway=crossing` |
 
 ### 2. Zone extension (connecting segments)
 
 After primary zones are identified, the zones are extended based on the following rules:
 
-* **Affected Roads:** Identified zones cover a road segment of 300 meters.
-* **Gap Filling:** If the distance between two identified Tempo 30 zones is less than 500 meters, the intermediate segment is also classified as Tempo 30.
+* **Affected roads:** Identified zones cover a road segment of 300 meters.
+* **Gap filling:** If the distance between two identified Tempo 30 zones is less than 500 meters, the intermediate segment is also classified as Tempo 30.
 
 # Architecture
 ![Alt text](Architecture.png)
