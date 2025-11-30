@@ -1,19 +1,19 @@
+# Tempo 30 Zones Analysis
 
-# Tempo 30 zones analysis
-
-A comprehensive project for the automated identification and visualization of Tempo 30 (20 mph / 30 km/h) zones based on OpenStreetMap (OSM) data and PostGIS analysis. A Node.js proxy is included to bypass CORS restrictions between the browser and GeoServer.
+Automated identification and visualization of Tempo 30 (30 km/h / 20 mph) zones based on OpenStreetMap (OSM) data and PostGIS analysis.
+A Node.js proxy is included to bypass CORS restrictions between the browser and GeoServer.
 
 ## Core components
 
-This project combines several tools for importing, analyzing, and providing geospatial data:
+This project integrates several tools for importing, analyzing, and serving geospatial data:
 
-| Component | Layer | Purpose |
-| :--- | :--- | :--- |
-| **osm2pgsql** | **Data** | Loads OSM data into the database. |
-| **PostGIS** | **Data** | Stores road data and performs spatial analysis. |
-| **GeoServer** | **Service** | Provides analysis results as a WFS. |
-| **Express.js** | **Service** | Proxy to bypass CORS restrictions for WFS queries. |
-| **MapLibre** | **Presentation** | Frontend for displaying the identified zones. |
+| Component      | Layer        | Purpose                                                 |
+| :------------- | :----------- | :------------------------------------------------------ |
+| **osm2pgsql**  | Data         | Imports OSM data into PostgreSQL.                       |
+| **PostGIS**    | Data         | Stores OSM geometries and performs spatial analysis.    |
+| **GeoServer**  | Service      | Exposes analysis results as a WFS.                      |
+| **Express.js** | Service      | Provides a CORS-bypassing proxy for WFS requests.       |
+| **MapLibre**   | Presentation | Displays the identified Tempo-30 segments on a web map. |
 
 ## Installation and setup
 
@@ -21,51 +21,82 @@ This project combines several tools for importing, analyzing, and providing geos
 
 ### 2. Initialize setup
 
-Run the setup shell to install all dependencies.
+Run the setup script to install all dependencies:
 
 ```bash
 bash setup.sh
-````
+```
+
 ### 3. Start application
 
-Run the start shell to start the application.
+Start the analysis stack:
 
 ```bash
 bash start.sh
-````
+```
 
-## Tempo 30 zones logic
+---
 
-The identification of road segments eligible for Tempo 30 follows a two-stage logic: **Zones** and **Connecting Segments**.
+## Tempo 30 zone logic
 
-### 1. Primary zone identification
+The classification of road segments follows a multi-stage spatial logic based directly on OSM tagging and neighborhood analysis.
 
-Road segments are assigned Tempo 30 zones if one of the following conditions is met.
+### 1. Eligible roads
+
+Only roads meeting all of the following criteria are evaluated:
+
+* Road class in: `highway=primary`, `highway=secondary`, and `highway=tertiary`.
+* Not a living street: `highway!=living_street`
+* No existing valid 30-zone tagging. Ignored cases include:
+  * Numeric `maxspeed > 30`
+  * Non-numeric `maxspeed` not in: `DE:zone:30`, `DE:zone:20`, `walk`, `DE:living_street`
+
+### 2. Primary zone identification
+
+A road segment becomes a Tempo 30 candidate if at least one of the following applies:
 
 #### A. Automatic assignment
 
-* **Residential roads:** All roads tagged with `highway=residential` are automatically classified as Tempo 30.
+* **Residential roads:**
+  All `highway=residential` segments are automatically classified as Tempo 30.
 
-#### B. Conditional assignment (at least one condition must be met)
+#### B. Social facilities (protective zones)
 
-Applies to the following major road classes:
+Applies to `highway=primary`, `highway=secondary`, and `highway=tertiary`.
 
-* `highway=primary`
-* `highway=secondary`
-* `highway=tertiary`
+A segment qualifies if it lies **within 50 m** *and* **within 150 m** of one or more of the following:
 
-| Condition             | Description                                                      | OSM Tags (Examples)                                                                                    |
-| :-------------------- | :--------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------- |
-| **Noise protection**  | Residential buildings located less than 15 meters from the road. | `building=residential`, `building=apartments`, `building=house`, `building=terrace`                    |
-| **Social facilities** | Sensitive facilities located less than 50 meters from the road.  | `amenity=school`, `amenity=kindergarten`, `amenity=hospital`, `leisure=playground`, `highway=crossing` |
+* Schools: `amenity=school`
+* Kindergartens: `amenity=kindergarten`, `amenity=childcare`
+* Senior & care facilities: `nursing_home`, `hospital`, `social_facility` with `social_facility:for=senior`
+* Playgrounds: `leisure=playground`
+* Pedestrian crossings: `highway=crossing` with `crossing=zebra` or `crossing_ref=zebra`
 
-### 2. Zone extension (connecting segments)
+#### C. Noise protection (residential exposure)
 
-After primary zones are identified, the zones are extended based on the following rules:
+Applies to `highway=primary`, `highway=secondary`, and `highway=tertiary`.
 
-* **Affected roads:** Identified zones cover a road segment of 300 meters.
-* **Gap filling:** If the distance between two identified Tempo 30 zones is less than 500 meters, the intermediate segment is also classified as Tempo 30.
+A segment qualifies if it lies **within 15 m** of residential buildings:
+
+* `building=residential`
+* `building=apartments`
+* `building=house`
+* `building=terrace`
+
+### 3. Zone extension (network consistency)
+
+After primary segments are determined, zones are extended for consistency:
+
+* **Protected zone length:**
+  Identified segments are treated as 300 m protected corridors.
+
+* **Gap filling:**
+  If two Tempo-30 corridors are **less than 500 m apart**, the intermediate road segment is also classified as Tempo 30.
+
+This produces continuous, real-world-aligned Tempo-30 areas instead of isolated fragments.
+
+---
 
 # Architecture
-![Alt text](Architecture.png)
 
+![Alt text](Architecture.png)
