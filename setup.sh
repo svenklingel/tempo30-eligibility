@@ -7,12 +7,16 @@ echo "Setup started."
 ./database/setup.sh
 echo "Database initialized."
 
-# Analyze data 
+# Perform analysis
 ./database/analyze.sh
 echo "Eligible roads identified."
 
 # Initialize GeoServer
 ./geoserver/setup.sh
 echo "GeoServer configured."
+
+# Initialize Proxy
+./proxy/setup.sh
+echo "Proxy initialized."
 
 echo "Full setup completed."
