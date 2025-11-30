@@ -1,7 +1,7 @@
--- 1. Drop old table (if exists) so that the script can be rerun
+-- Drop table of old results
 DROP TABLE IF EXISTS tempo30_analysis_result;
 
--- 2. Create new table based on the analysis
+-- Create new table based on the analysis
 CREATE TABLE tempo30_analysis_result AS
 WITH 
 -- 0. DEFINE THE BOUNDING BOX (analysis area)
@@ -16,7 +16,7 @@ analysis_bbox AS (
     ) as geom
 ),
 
--- 1. Retrieve relevant roads
+-- Retrieve relevant roads
 relevant_roads AS (
     SELECT 
         p.osm_id,
@@ -39,7 +39,7 @@ relevant_roads AS (
       )
 ),
 
--- 2. Trigger objects: Social facilities
+-- Get social facilities
 social_triggers AS (
     -- Polygons
     SELECT ST_Transform(p.way, 25832) as geom
@@ -60,7 +60,7 @@ social_triggers AS (
        OR (p.highway = 'crossing' AND ((p.tags->'crossing') = 'zebra' OR (p.tags->'crossing_ref') = 'zebra')))
 ),
 
--- 3. Trigger objects: Noise protection / residential buildings
+-- Get residential buildings
 noise_triggers AS (
     SELECT ST_Transform(p.way, 25832) as geom
     FROM planet_osm_polygon p, analysis_bbox b
@@ -68,7 +68,7 @@ noise_triggers AS (
       AND p.building IN ('residential', 'apartments', 'house', 'terrace')
 ),
 
--- 4. Create masks
+-- Create masks
 check_mask_social AS (
     SELECT ST_Union(ST_Buffer(geom, 50)) as geom FROM social_triggers
 ),
@@ -82,7 +82,7 @@ geo_mask_noise AS (
     SELECT ST_Union(ST_Buffer(geom, 150)) as geom FROM noise_triggers
 ),
 
--- 5. Initial assignment
+-- Initial assignment
 initial_tempo30 AS (
     -- A. Automatic: Residential streets
     SELECT osm_id, geom FROM relevant_roads WHERE highway = 'residential'
@@ -110,13 +110,13 @@ initial_tempo30 AS (
       AND ST_Intersects(r.geom, large.geom)
 ),
 
--- 6. Fill gaps (< 500m)
+-- Fill gaps (< 500m)
 gap_fill_mask AS (
     SELECT ST_Union(ST_Buffer(geom, 250)) as geom
     FROM initial_tempo30
 )
 
--- 7. Final output to the table
+-- Final output table
 SELECT 
     row_number() over() as id, -- Candidate primary key
     r.osm_id,
@@ -133,9 +133,14 @@ JOIN gap_fill_mask g ON ST_Intersects(r.geom, g.geom)
 LEFT JOIN initial_tempo30 t30 ON r.osm_id = t30.osm_id
 WHERE NOT ST_IsEmpty(ST_Intersection(r.geom, g.geom));
 
--- 8. Cleanup & indexing (important for performance!)
+-- Indexing
 ALTER TABLE tempo30_analysis_result ADD PRIMARY KEY (id);
 CREATE INDEX idx_tempo30_res_geom ON tempo30_analysis_result USING GIST (geom);
 
--- Optional: Feedback on the number of created zone segments
+-- Number of suitable roads
 SELECT count(*) as number_of_zone_segments FROM tempo30_analysis_result;
+
+-- ALlow access for GeoServer
+GRANT USAGE ON SCHEMA public TO geoserver_user;
+GRANT SELECT ON tempo30_analysis_result TO geoserver_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO geoserver_user;

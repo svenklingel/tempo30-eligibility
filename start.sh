@@ -10,7 +10,7 @@ GEOSERVER_REST_URL="http://localhost:8082/geoserver/rest/about/version.json"
 GEOSERVER_USER="admin"
 GEOSERVER_PASS="geoserver"
 HTML_FILE="$SCRIPT_DIR/frontend/map.html"
-PROXY_SCRIPT="$SCRIPT_DIR/proxy.js"
+PROXY_SCRIPT="$SCRIPT_DIR/proxy/proxy.js" 
 
 # -----------------------------------------------
 # Start PostgreSQL 
@@ -24,7 +24,7 @@ else
 fi
 
 # ------------------------
-# 1. Start GeoServer
+# Start GeoServer
 # ------------------------
 if pgrep -f "geoserver" > /dev/null; then
     echo "GeoServer is already running."
@@ -34,7 +34,7 @@ else
 fi
 
 # ------------------------
-# 2. Wait for GeoServer
+# Wait for GeoServer
 # ------------------------
 echo "Waiting for GeoServer..."
 MAX_WAIT=120
@@ -48,7 +48,6 @@ while [ $COUNTER -lt $MAX_WAIT ]; do
     sleep 5
     COUNTER=$((COUNTER + 5))
 done
-
 if [ $COUNTER -ge $MAX_WAIT ]; then
     echo "GeoServer could not be started."
     exit 1
@@ -58,7 +57,7 @@ fi
 # Start Proxy
 # ------------------------
 echo "Starting GeoServer Proxy..."
-if pgrep -f "node.*proxy.js" > /dev/null; then
+if pgrep -f "node proxy.js" > /dev/null; then
     echo "Proxy is already running."
 else
     cd "$SCRIPT_DIR"
@@ -71,19 +70,11 @@ fi
 # Open HTML Map
 # ------------------------
 echo "Opening map in browser..."
+
 if [ -f "$HTML_FILE" ]; then
     firefox --new-tab "file://$HTML_FILE" 2>/dev/null &
-    echo "Map opened in Firefox: file://$HTML_FILE"
 else
     echo "HTML file not found: $HTML_FILE"
 fi
-
-echo ""
-echo "========================================="
-echo "Master script completed successfully"
-echo "========================================="
-echo "GeoServer: http://localhost:8082/geoserver"
-echo "Map: file://$HTML_FILE"
-echo "========================================="
 
 echo "Firefox will open and display the map"

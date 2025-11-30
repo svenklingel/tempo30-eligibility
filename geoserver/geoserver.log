@@ -1,0 +1,19 @@
+GEOSERVER DATA DIR is /usr/local/lib/geoserver-2.22.2/data_dir
+2025-11-22 11:48:02.054:INFO::main: Logging initialized @3007ms to org.eclipse.jetty.util.log.StdErrLog
+2025-11-22 11:48:03.149:INFO:oejs.Server:main: jetty-9.4.48.v20220622; built: 2022-06-21T20:42:25.880Z; git: 6b67c5719d1f4371b33655ff2d047d24e171e49a; jvm 1.8.0_382-8u382-ga-1~22.04.1-b05
+2025-11-22 11:48:03.266:INFO:oejdp.ScanningAppProvider:main: Deployment monitor [file:///usr/local/lib/geoserver-2.22.2/webapps/] at interval 1
+2025-11-22 11:48:05.754:INFO:oejw.StandardDescriptorProcessor:main: NO JSP Support for /geoserver, did not find org.eclipse.jetty.jsp.JettyJspServlet
+2025-11-22 11:48:06.158:INFO:oejs.session:main: DefaultSessionIdManager workerName=node0
+2025-11-22 11:48:06.159:INFO:oejs.session:main: No SessionScavenger set, using defaults
+2025-11-22 11:48:06.162:INFO:oejs.session:main: node0 Scavenging every 660000ms
+11:48:10 CONFIG [geoserver.logging] - Logging policy: Log4J2
+Nov 22, 2025 11:48:12 AM org.geotools.imageio.netcdf.utilities.NetCDFUtilities <clinit>
+INFO: Value of Check Coordinate Plugins:null
+Nov 22, 2025 11:48:12 AM org.geotools.imageio.netcdf.utilities.NetCDFUtilities <clinit>
+INFO: Should check for coordinate handler plugins:false
+2025-11-22 11:48:15.048:INFO:oejshC.geoserver:main: Initializing Spring root WebApplicationContext
+2025-11-22 11:49:30.736:INFO:oejsh.ContextHandler:main: Started o.e.j.w.WebAppContext@e320068{GeoServer,/geoserver,file:///usr/local/lib/geoserver-2.22.2/webapps/geoserver/,AVAILABLE}{/usr/local/lib/geoserver-2.22.2/webapps/geoserver}
+2025-11-22 11:49:31.009:INFO:oejs.AbstractConnector:main: Started ServerConnector@13b50d36{HTTP/1.1, (http/1.1)}{0.0.0.0:8082}
+2025-11-22 11:49:31.013:INFO:oejs.Server:main: Started @91966ms
+Running Firefox as root in a regular user's session is not supported.  ($XAUTHORITY is /home/user/.Xauthority which is owned by user.)
+2025-11-22 11:51:01.719:INFO:oejshC.geoserver:qtp1792845110-14: Initializing Spring DispatcherServlet 'dispatcher'

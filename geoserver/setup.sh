@@ -9,20 +9,20 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Configuration
 # ------------------------
 GEOSERVER_HOME="/usr/local/lib/geoserver-2.22.2"
-GEOSERVER_REST="http://localhost:8082/geoserver/rest"
+GEOSERVER_REST_URL="http://localhost:8082/geoserver/rest"
 GEOSERVER_USER="admin"
 GEOSERVER_PASS="geoserver"
 
 WORKSPACE="roads_ws"
 DATASTORE="roads_store"
 DB_NAME="tempo30-eligibility"
-DB_USER="postgres"
-DB_PASS="postgres"
+DB_USER="geoserver_user"
+DB_PASS="geoserver"
 DB_HOST="localhost"
 DB_PORT="5432"
 
 LAYER1="planet_osm_roads"
-LAYER2="eligible_roads"
+LAYER2="tempo30_analysis_result"
 
 # ------------------------
 # Check if GeoServer is already running
@@ -37,12 +37,11 @@ fi
 # ------------------------
 # Wait for GeoServer to be ready
 # ------------------------
-echo "Waiting for GeoServer to be ready..."
-MAX_WAIT=120  # Maximum 2 minutes
+echo "Waiting for GeoServer..."
+MAX_WAIT=300
 COUNTER=0
-
 while [ $COUNTER -lt $MAX_WAIT ]; do
-    if curl -s -u "$GEOSERVER_USER:$GEOSERVER_PASS" "$GEOSERVER_REST/about/version.json" > /dev/null 2>&1; then
+    if curl -s -u "$GEOSERVER_USER:$GEOSERVER_PASS" "$GEOSERVER_REST_URL" > /dev/null 2>&1; then
         echo "GeoServer is ready!"
         break
     fi
@@ -50,12 +49,14 @@ while [ $COUNTER -lt $MAX_WAIT ]; do
     sleep 5
     COUNTER=$((COUNTER + 5))
 done
-
 if [ $COUNTER -ge $MAX_WAIT ]; then
-    echo "ERROR: GeoServer did not start within $MAX_WAIT seconds."
-    echo "Check the log file: $SCRIPT_DIR/geoserver.log"
+    echo "GeoServer could not be started."
     exit 1
 fi
+
+# Set correct permissions
+sudo chown -R $USER:$USER "$GEOSERVER_HOME/data_dir"
+echo "Permissions set."
 
 # ------------------------
 # Create Workspace
@@ -64,7 +65,7 @@ echo "Creating Workspace: $WORKSPACE"
 curl -u "$GEOSERVER_USER:$GEOSERVER_PASS" -XPOST \
   -H "Content-type: application/json" \
   -d "{\"workspace\": {\"name\": \"$WORKSPACE\"}}" \
-  "$GEOSERVER_REST/workspaces" || echo "Workspace might already exist"
+  "$GEOSERVER_REST_URL/workspaces" || echo "Workspace might already exist"
 
 # ------------------------
 # Create PostGIS DataStore
@@ -87,7 +88,7 @@ curl -u "$GEOSERVER_USER:$GEOSERVER_PASS" -XPOST \
       }
     }
   }" \
-  "$GEOSERVER_REST/workspaces/$WORKSPACE/datastores" || echo "DataStore might already exist"
+  "$GEOSERVER_REST_URL/workspaces/$WORKSPACE/datastores" || echo "DataStore might already exist"
 
 # ------------------------
 # Create FeatureTypes
@@ -96,8 +97,14 @@ for LAYER in "$LAYER1" "$LAYER2"; do
     echo "Creating FeatureType: $LAYER"
     curl -u "$GEOSERVER_USER:$GEOSERVER_PASS" -XPOST \
       -H "Content-type: application/json" \
-      -d "{\"featureType\": {\"name\": \"$LAYER\"}}" \
-      "$GEOSERVER_REST/workspaces/$WORKSPACE/datastores/$DATASTORE/featuretypes" || echo "Layer $LAYER might already exist"
+      -d "{
+            \"featureType\": {
+                \"name\": \"$LAYER\",
+                \"nativeName\": \"$LAYER\"
+            }
+          }" \
+      "$GEOSERVER_REST_URL/workspaces/$WORKSPACE/datastores/$DATASTORE/featuretypes" \
+      || echo "Layer $LAYER might already exist"
 done
 
 echo ""
