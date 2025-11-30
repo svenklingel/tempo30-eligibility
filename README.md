@@ -64,7 +64,7 @@ A road segment becomes a Tempo 30 candidate if at least one of the following app
 
 Applies to `highway=primary`, `highway=secondary`, and `highway=tertiary`.
 
-A segment qualifies if it lies **within 50 m** *and* **within 150 m** of one or more of the following:
+A segment qualifies if it lies **within 50 m** of one or more of the following:
 
 * Schools: `amenity=school`
 * Kindergartens: `amenity=kindergarten`, `amenity=childcare`
