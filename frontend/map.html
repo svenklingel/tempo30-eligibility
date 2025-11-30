@@ -52,26 +52,24 @@
 </div>
 
 <script>
-    // --- WICHTIG: Hier zeigen wir auf den Proxy-Server ---
+    // Proxy URL
     const PROXY_URL = 'http://localhost:3000';
 
-    // Karte initialisieren
+    // Map initialization
     const map = new maplibregl.Map({
         container: 'map',
-        style: 'https://demotiles.maplibre.org/style.json', // Standard OSM Style
-        center: [8.725420946651067, 53.11198049933926], // Startposition (ungefähr)
+        style: 'https://demotiles.maplibre.org/style.json', 
+        center: [8.725420946651067, 53.11198049933926], // Center in Bremen
         zoom: 12
     });
 
-    // Zoom- und Rotations-Kontrollen
+    // Zoom and rotation controls
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
     map.on('load', () => {
         console.log('Map loaded successfully');
 
-        // ---------------------------------------------------------
-        // Layer 1: Alle Straßen (via Proxy Route /roads-wfs)
-        // ---------------------------------------------------------
+        // Layer 1: All roads
         map.addSource('all_roads', {
             type: 'geojson',
             data: `${PROXY_URL}/roads-wfs` 
@@ -92,9 +90,7 @@
             }
         });
 
-        // ---------------------------------------------------------
-        // Layer 2: Geeignete Straßen (via Proxy Route /tempo30-wfs)
-        // ---------------------------------------------------------
+        // Layer 2: Eligible roads (Tempo 30)
         map.addSource('eligible_roads', {
             type: 'geojson',
             data: `${PROXY_URL}/tempo30-wfs`
@@ -117,14 +113,12 @@
 
         console.log('Layers added successfully pointing to Proxy');
 
-        // ---------------------------------------------------------
-        // Automatisch auf die Daten zoomen, sobald sie geladen sind
-        // ---------------------------------------------------------
+        // Zoom to data extent of eligible roads after source is loaded
         map.on('sourcedata', (e) => {
             if (e.sourceId === 'eligible_roads' && e.isSourceLoaded) {
                 const features = map.querySourceFeatures('eligible_roads');
                 if (features.length > 0) {
-                    // Wir erstellen eine Bounding Box um alle Features
+                    // Create a bounding box around all features
                     const bounds = new maplibregl.LngLatBounds();
                     features.forEach(feature => {
                         if (feature.geometry.type === 'LineString') {
@@ -133,30 +127,27 @@
                             });
                         }
                     });
-                    // Karte auf diese Box zoomen
+                    // Zoom to this bounding box
                     map.fitBounds(bounds, { padding: 50, maxZoom: 15 });
                 }
             }
         });
     });
 
-    // Fehlerbehandlung für MapLibre
+    // Error handling for MapLibre
     map.on('error', (e) => {
         console.error('MapLibre GL Error:', e.error);
     });
 
-    // ---------------------------------------------------------
-    // Interaktion: Popup beim Klick
-    // ---------------------------------------------------------
+    // Interaction: Popup on click
     map.on('click', 'eligible_roads_layer', (e) => {
         const properties = e.features[0].properties;
-        
-        // Popup-Inhalt dynamisch generieren
+
+        // Popup content dynamically generate
         let popupContent = '<div style="font-family: Inter, sans-serif; max-width: 250px;">';
         popupContent += '<strong style="display: block; margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Straßendaten</strong>';
         
         for (const [key, value] of Object.entries(properties)) {
-            // Wir zeigen keine Geometriedaten oder leere Felder an
             if (value && key !== 'geometry' && key !== 'bbox') {
                 popupContent += `<div style="font-size: 0.85rem; margin: 4px 0; word-break: break-word;">
                     <strong style="color: #555;">${key}:</strong> ${value}
@@ -171,9 +162,7 @@
             .addTo(map);
     });
 
-    // ---------------------------------------------------------
-    // Interaktion: Mauszeiger ändern (Pointer)
-    // ---------------------------------------------------------
+    // Interaction: Change mouse pointer (Pointer)
     map.on('mouseenter', 'eligible_roads_layer', () => {
         map.getCanvas().style.cursor = 'pointer';
     });
