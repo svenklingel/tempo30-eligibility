@@ -19,30 +19,19 @@ This project combines several tools for importing, analyzing, and providing geos
 
 ### 1. Install OSGeoLive as a virtual machine
 
-### 2. Execute setup
+### 2. Initialize setup
 
-Run the setup shell to install all dependencies and populate the PostGIS database with OSM data.
-
-```bash
-chmod +x setup.sh
-sudo ./setup.sh
-````
-### 3. Initialize application
-
-Run the setup shell to initialize the application.
+Run the setup shell to install all dependencies.
 
 ```bash
-chmod +x setup.sh
-sudo ./setup.sh
+bash setup.sh
 ````
-
-### 4. Start application
+### 3. Start application
 
 Run the start shell to start the application.
 
 ```bash
-chmod +x start.sh
-./start.sh
+bash start.sh
 ````
 
 ## Tempo 30 zones logic
