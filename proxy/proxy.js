@@ -26,9 +26,12 @@ app.options(/(.*)/, (req, res) => {
 
 // Used for WFS requests
 async function fetchWfs(layerName) {
-    const url = `${GEOSERVER_BASE_URL}/${WORKSPACE}/wfs?` +
+    const url = `${GEOSERVER_BASE_URL}/${WORKSPACE}/ows?` + // <-- HIER IST DIE KORREKTUR
         `service=WFS&version=2.0.0&request=GetFeature&` +
         `typeName=${WORKSPACE}:${layerName}&outputFormat=${OUTPUT_FORMAT}&srsName=${SRS_NAME}`;
+    // const url = `${GEOSERVER_BASE_URL}/${WORKSPACE}/wfs?` +
+     //   `service=WFS&version=2.0.0&request=GetFeature&` +
+       // `typeName=${WORKSPACE}:${layerName}&outputFormat=${OUTPUT_FORMAT}&srsName=${SRS_NAME}`;
 
     console.log(`Fetching WFS: ${url}`);
 
