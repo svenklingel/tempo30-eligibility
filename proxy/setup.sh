@@ -1,20 +1,18 @@
 #!/bin/bash
 set -e
 
-# -----------------------------------------------
-# Setup to install necessary libraries for the proxy
-# -----------------------------------------------
+echo "Starting setup..."
 
-# Install Node.js and npm if missing
+# Install Node.js 18 if missing
 if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
-    echo "Node.js/npm not found. Installing..."
-    curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+    echo "Node.js/npm not found. Installing Node 18..."
+    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
     sudo apt-get install -y nodejs
 else
     echo "Node.js and npm are already installed."
 fi
 
-# Change to the script directory
+# Change to script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
