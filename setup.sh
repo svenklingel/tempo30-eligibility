@@ -3,6 +3,12 @@ set -e
 
 echo "Setup started."
 
+# Make all scripts executable
+chmod +x database/setup.sh
+chmod +x database/analyze.sh
+chmod +x geoserver/setup.sh
+chmod +x proxy/setup.sh
+
 # Initialize database
 ./database/setup.sh
 echo "Database initialized."
