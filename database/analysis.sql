@@ -1,146 +1,170 @@
--- Drop table of old results
 DROP TABLE IF EXISTS tempo30_analysis_result;
 
--- Create new table based on the analysis
 CREATE TABLE tempo30_analysis_result AS
 WITH 
--- 0. DEFINE THE BOUNDING BOX (analysis area)
+-- 1. Bounding Box of analysis area
 analysis_bbox AS (
     SELECT ST_Transform(
-        ST_MakeEnvelope(
-            8.787509625498963,  53.0709780564462,  -- Min Lon, Min Lat
-            8.828257319140798,  53.07695241955986, -- Max Lon, Max Lat
-            4326
-        ), 
-        3857 -- Transform to the coordinate system of the osm2pgsql database
+        ST_MakeEnvelope(8.7875, 53.0709, 8.8282, 53.0769, 4326), 
+        3857
     ) as geom
 ),
 
--- Retrieve relevant roads
+-- 2. All residential, primary, secondary and tertiary roads with speed > 30km/h
 relevant_roads AS (
     SELECT 
-        p.osm_id,
-        p.highway,
-        p.name,
-        ST_Transform(p.way, 25832) as geom 
+        p.osm_id, p.highway, p.name,
+        ST_Transform(p.way, 25832) as geom -- UTM Zone32N (EPSG:25832) for metric calculations
     FROM planet_osm_line p, analysis_bbox b
     WHERE p.way && b.geom 
       AND p.highway IN ('residential', 'primary', 'secondary', 'tertiary')
-      AND p.highway != 'living_street' 
-      AND (
-          (p.tags->'maxspeed') IS NULL 
-          OR 
-          ((p.tags->'maxspeed') ~ '^[0-9]+$' AND (p.tags->'maxspeed')::integer > 30)
-          OR
-          (
-             NOT (p.tags->'maxspeed') ~ '^[0-9]+$' 
-             AND (p.tags->'maxspeed') NOT IN ('DE:zone:30', 'DE:zone:20', 'walk', 'DE:living_street')
-          )
+      AND p.highway != 'living_street'
+      -- Exclude roads that already have maxspeed 30
+      AND NOT (
+          (p.tags->'maxspeed') IN ('30', 'DE:zone:30')
       )
-),
-
--- Get social facilities
-social_triggers AS (
-    -- Polygons
-    SELECT ST_Transform(p.way, 25832) as geom
-    FROM planet_osm_polygon p, analysis_bbox b
-    WHERE p.way && b.geom
-      AND (p.amenity IN ('school', 'kindergarten', 'childcare', 'nursing_home', 'hospital')
-       OR (p.amenity = 'social_facility' AND (p.tags->'social_facility:for') = 'senior')
-       OR p.leisure = 'playground')
-    
-    UNION ALL
-    
-    -- Points
-    SELECT ST_Buffer(ST_Transform(p.way, 25832), 1) as geom
-    FROM planet_osm_point p, analysis_bbox b
-    WHERE p.way && b.geom
-      AND (p.amenity IN ('school', 'kindergarten', 'childcare', 'nursing_home', 'hospital')
-       OR (p.amenity = 'social_facility' AND (p.tags->'social_facility:for') = 'senior')
-       OR (p.highway = 'crossing' AND ((p.tags->'crossing') = 'zebra' OR (p.tags->'crossing_ref') = 'zebra')))
-),
-
--- Get residential buildings
-noise_triggers AS (
-    SELECT ST_Transform(p.way, 25832) as geom
-    FROM planet_osm_polygon p, analysis_bbox b
-    WHERE p.way && b.geom
-      AND p.building IN ('residential', 'apartments', 'house', 'terrace')
-),
-
--- Create masks
-check_mask_social AS (
-    SELECT ST_Union(ST_Buffer(geom, 50)) as geom FROM social_triggers
-),
-check_mask_noise AS (
-    SELECT ST_Union(ST_Buffer(geom, 15)) as geom FROM noise_triggers
-),
-geo_mask_social AS (
-    SELECT ST_Union(ST_Buffer(geom, 150)) as geom FROM social_triggers
-),
-geo_mask_noise AS (
-    SELECT ST_Union(ST_Buffer(geom, 150)) as geom FROM noise_triggers
-),
-
--- Initial assignment
-initial_tempo30 AS (
-    -- A. Automatic: Residential streets
-    SELECT osm_id, geom FROM relevant_roads WHERE highway = 'residential'
-
-    UNION ALL
-
-    -- B. Social facilities
-    SELECT 
-        r.osm_id,
-        ST_Intersection(r.geom, large.geom) as geom
-    FROM relevant_roads r, check_mask_social small, geo_mask_social large
-    WHERE r.highway IN ('primary', 'secondary', 'tertiary')
-      AND ST_Intersects(r.geom, small.geom)
-      AND ST_Intersects(r.geom, large.geom)
-
-    UNION ALL
-
-    -- C. Noise protection
-    SELECT 
-        r.osm_id,
-        ST_Intersection(r.geom, large.geom) as geom
-    FROM relevant_roads r, check_mask_noise small, geo_mask_noise large
-    WHERE r.highway IN ('primary', 'secondary', 'tertiary')
-      AND ST_Intersects(r.geom, small.geom)
-      AND ST_Intersects(r.geom, large.geom)
-),
-
--- Fill gaps (< 500m)
-gap_fill_mask AS (
-    SELECT ST_Union(ST_Buffer(geom, 250)) as geom
-    FROM initial_tempo30
 )
 
--- Final output table
+-- 3. Trigger objects (social facilities, zebra crossings, residential buildings)
+trigger_objects AS (
+    -- A. Social Facilities (Polygons/Points/Zebras - 50m radius)
+    -- We union points and polygons here to simplify the subsequent joins
+    SELECT 
+        ST_Buffer(ST_Transform(p.way, 25832), 50) as geom, 
+        'social_facilities' as type
+    FROM planet_osm_polygon p, analysis_bbox b
+    WHERE p.way && b.geom
+      AND (
+          p.amenity IN ('school', 'kindergarten', 'childcare', 'nursing_home', 'hospital')
+          OR (p.amenity = 'social_facility' AND (p.tags->'social_facility:for') = 'senior') 
+          OR p.leisure = 'playground'
+      )
+    
+    UNION ALL
+    -- Social Facilities (Points)
+    SELECT 
+        ST_Buffer(ST_Transform(p.way, 25832), 50) as geom, 
+        'social_facilities' as type
+    FROM planet_osm_point p, analysis_bbox b
+    WHERE p.way && b.geom
+      AND (
+          p.amenity IN ('school', 'kindergarten', 'childcare', 'nursing_home', 'hospital')
+          OR (p.amenity = 'social_facility' AND (p.tags->'social_facility:for') = 'senior') 
+          OR p.leisure = 'playground'
+      )
+
+    UNION ALL
+    -- Zebra Crossings (Points/Lines - 50m radius)
+    SELECT 
+        ST_Buffer(ST_Transform(p.way, 25832), 50) as geom, 
+        'social_facilities' as type
+    FROM planet_osm_point p, analysis_bbox b
+    WHERE p.way && b.geom
+      AND p.highway = 'crossing' 
+      AND ((p.tags->'crossing') = 'zebra' OR (p.tags->'crossing_ref') = 'zebra')
+    
+    UNION ALL
+    
+    SELECT 
+        ST_Buffer(ST_Transform(p.way, 25832), 50) as geom, 
+        'social_facilities' as type
+    FROM planet_osm_line p, analysis_bbox b
+    WHERE p.way && b.geom
+      AND p.highway = 'crossing' 
+      AND ((p.tags->'crossing') = 'zebra' OR (p.tags->'crossing_ref') = 'zebra')
+
+    UNION ALL
+
+    -- C. Noise Protection (Polygons/Points - 15m radius)
+    SELECT 
+        ST_Buffer(ST_Transform(p.way, 25832), 15) as geom, 
+        'noise_protection' as type
+    FROM planet_osm_polygon p, analysis_bbox b
+    WHERE p.way && b.geom AND p.building IN ('residential', 'apartments', 'house', 'terrace')
+
+    UNION ALL
+    
+    SELECT 
+        ST_Buffer(ST_Transform(p.way, 25832), 15) as geom, 
+        'noise_protection' as type
+    FROM planet_osm_point p, analysis_bbox b
+    WHERE p.way && b.geom AND p.building IN ('residential', 'apartments', 'house', 'terrace')
+),
+
+-- 4. Road segments that intersect with buffered trigger objects 
+road_segments AS (
+    SELECT 
+        r.osm_id,
+        r.name as trigger_road_name, -- Save road name to exclude parallel roads later
+        t.type,
+        ST_Intersection(r.geom, t.geom) as geom
+    FROM relevant_roads r
+    INNER JOIN trigger_objects t 
+      ON ST_Intersects(r.geom, t.geom)
+),
+
+-- 5. Zone expansion (300m guarantee) & residential assignment
+raw_zones AS (
+    -- Zone expansion: Buffer road segements by 150 m (ensures 300 m minimum length)
+    SELECT ST_Buffer(geom, 150) as geom FROM road_segments
+    UNION ALL
+    -- Residential roads are base zones
+    SELECT geom as geom FROM relevant_roads WHERE highway = 'residential'
+),
+
+-- 6. Gap filling: Fills gaps smaller than 500m using morphological closing
+gap_fill_mask AS (
+    -- Dilation (+250m) followed by Erosion (-250m)
+    SELECT 
+        ST_Buffer(ST_Union(ST_Buffer(geom, 250)), -250) as geom 
+    FROM raw_zones
+),
+
+-- 7. Potential candidates within the gap fill mask
+candidates AS (
+    SELECT 
+        r.osm_id, r.name, r.highway,
+        ST_Intersection(r.geom, m.geom) as geom
+    FROM relevant_roads r, gap_fill_mask m
+    WHERE ST_Intersects(r.geom, m.geom)
+)
+-- Result table with justifications
 SELECT 
-    row_number() over() as id, -- Candidate primary key
-    r.osm_id,
-    r.name,
-    r.highway,
+    row_number() over() as id,
+    c.osm_id,
+    c.name,
+    c.highway,
+    
     CASE 
-        WHEN r.highway = 'residential' THEN 'Residential Area (Automatic)'
-        WHEN t30.osm_id IS NOT NULL THEN 'Protected Zone (300m area)'
-        ELSE 'Gap Fill (<500m)'
+        WHEN c.highway = 'residential' THEN 'Noise protection'
+        WHEN EXISTS (
+            SELECT 1 FROM road_segments s
+            WHERE s.type = 'Social facilities' AND s.geom && c.geom 
+                  AND ST_DWithin(c.geom, s.geom, 50)
+        ) THEN 'Social facilities'
+        WHEN EXISTS (
+            SELECT 1 FROM road_segments s
+            WHERE s.type = 'Noise protection' AND s.geom && c.geom 
+                  AND ST_DWithin(c.geom, s.geom, 15)
+        ) THEN 'Noise protection'
+        ELSE 'Gap filling / Zone expansion'
     END as justification,
-    ST_Multi(ST_Transform(ST_Intersection(r.geom, g.geom), 3857)) as geom -- ST_Multi for consistency
-FROM relevant_roads r
-JOIN gap_fill_mask g ON ST_Intersects(r.geom, g.geom)
-LEFT JOIN initial_tempo30 t30 ON r.osm_id = t30.osm_id
-WHERE NOT ST_IsEmpty(ST_Intersection(r.geom, g.geom));
+    
+    ST_Multi(ST_Transform(c.geom, 3857)) as geom
+FROM candidates c
+WHERE 
+    c.highway = 'residential' -- Residential road segments are always included
+    -- Only road segments close to a trigger road segment or with the same road name are included --> Avoid parallel roads being included
+    OR EXISTS (
+        SELECT 1 
+        FROM road_segments s
+        WHERE s.geom && c.geom
+          AND (
+                ST_DWithin(c.geom, s.geom, 1)
+                OR (c.name IS NOT NULL AND c.name = s.trigger_road_name)
+              )
+    );
 
--- Indexing
 ALTER TABLE tempo30_analysis_result ADD PRIMARY KEY (id);
-CREATE INDEX idx_tempo30_res_geom ON tempo30_analysis_result USING GIST (geom);
-
--- Number of suitable roads
-SELECT count(*) as number_of_zone_segments FROM tempo30_analysis_result;
-
--- ALlow access for GeoServer
-GRANT USAGE ON SCHEMA public TO geoserver_user;
+CREATE INDEX idx_tempo30_res_geom_test ON tempo30_analysis_result USING GIST (geom);
 GRANT SELECT ON tempo30_analysis_result TO geoserver_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO geoserver_user;
