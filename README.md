@@ -15,21 +15,34 @@ This project integrates several tools for importing, analyzing, and serving geos
 | **Express.js** | Service      | Provides a CORS-bypassing proxy for WFS requests.       |
 | **MapLibre**   | Presentation | Displays the identified Tempo-30 segments on a web map. |
 
+## Overview of the workflow
+1. Select eligible roads: Only primary, secondary, tertiary, and residential roads not already tagged as 30 km/h zones are considered; living streets are excluded.
+2. Buffer trigger objects: Social facilities, schools, care facilities, playgrounds, and zebra crossings are buffered by 50 m; residential buildings by 15 m.
+3. Identify affected road segments: Roads intersecting the buffered objects are flagged as candidates.
+4. Extend zones: Segments are buffered by 150 m to ensure minimum 300 m zone length.
+5. Close gaps: Morphological operations fill gaps smaller than 500 m.
+6. Finalize selection: Only segments with the same name or within 1 m of a candidate are retained to ensure that unrelated roads are excluded.
+
 ## Installation and setup
 
 ### 1. Install OSGeoLive as a virtual machine
 
-### 2. Initialize setup
+### 2. Clone this repo
+```
+git clone https://github.com/svenklingel/tempo30-eligibility
+```
+    
+### 3. Initialize setup
 
-Run the setup script to install all dependencies:
+Navigate in the repo folder and run the setup script to install all dependencies:
 
 ```bash
 bash setup.sh
 ```
 
-### 3. Start application
+### 4. Start application
 
-Start the analysis stack:
+Navigate in the repo folder and run the start.sh to start the application:
 
 ```bash
 bash start.sh
