@@ -129,8 +129,6 @@ candidates AS (
     FROM relevant_roads r, gap_fill_mask m
     WHERE ST_Intersects(r.geom, m.geom)
 )
--- NACH candidates AS (...) EINFÜGEN, ERSETZT DEN BISHERIGEN RESULT-TEIL
-
 -- 8a. Seed segments: direkt begründete Segmente (Name oder <= 1 m zum Trigger)
 seed_segments AS (
     SELECT DISTINCT
@@ -183,13 +181,33 @@ final_segments AS (
     WHERE ST_Length(geom) >= 300  -- Mindestlänge 300 m in EPSG:25832
 )
 
--- 9. Result table with justifications (s.type Strings korrigiert)
+-- 9. Result table with category + justification (s.type Strings korrigiert)
 SELECT 
     row_number() OVER () AS id,
     f.osm_id,
     f.name,
     f.highway,
+
+    -- kurze Kategorie für Styling
+    CASE 
+        WHEN f.highway = 'residential' 
+          THEN 'residential'
+        WHEN EXISTS (
+            SELECT 1 FROM road_segments s
+            WHERE s.type = 'social_facilities'
+              AND s.geom && f.geom 
+              AND ST_DWithin(f.geom, s.geom, 50)
+        ) THEN 'social'
+        WHEN EXISTS (
+            SELECT 1 FROM road_segments s
+            WHERE s.type = 'noise_protection'
+              AND s.geom && f.geom 
+              AND ST_DWithin(f.geom, s.geom, 15)
+        ) THEN 'noise'
+        ELSE 'gapfill'
+    END AS category,
     
+    -- ausführliche Begründung
     CASE 
         WHEN f.highway = 'residential' 
           THEN 'Residential road (automatic candidate)'
