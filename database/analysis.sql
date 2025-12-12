@@ -106,12 +106,18 @@ road_segments AS (
 
 -- 5. Zone expansion (300m guarantee) & residential assignment
 raw_zones AS (
-    -- Zone expansion: Buffer road segements by 150 m (ensures 300 m minimum length)
-    SELECT ST_Buffer(geom, 150) as geom FROM road_segments
+    -- Zone expansion: buffer triggered road segments by 150 m (ensures ~300 m along-road extent)
+    SELECT ST_Buffer(geom, 150) AS geom
+    FROM road_segments
+
     UNION ALL
-    -- Residential roads are base zones
-    SELECT geom as geom FROM relevant_roads WHERE highway = 'residential'
+
+    -- Residential roads as base zones, also buffered by 150 m
+    SELECT ST_Buffer(geom, 150) AS geom
+    FROM relevant_roads
+    WHERE highway = 'residential'
 ),
+
 
 -- 6. Gap filling: Fills gaps smaller than 500m using morphological closing
 gap_fill_mask AS (
